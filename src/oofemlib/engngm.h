@@ -81,6 +81,8 @@
 #define _IFT_EngngModel_lstype "lstype"
 #define _IFT_EngngModel_smtype "smtype"
 
+#define _IFT_EngngModel_exportParameter "export"
+
 //@}
 
 namespace oofem {
@@ -310,6 +312,9 @@ protected:
     enum { InternalForcesExchangeTag, MassExchangeTag, LoadExchangeTag, ReactionExchangeTag, RemoteElementExchangeTag };
     /// List where parallel contexts are stored.
     std :: vector< ParallelContext > parallelContextList;
+
+    /// Parameter for export of the OOFEM file(s) - true/false
+    bool m_isOofemExportEnabled;
 
 public:
     /**
@@ -1108,6 +1113,11 @@ public:
 
     /// Returns string for prepending output (used by error reporting macros).
     std :: string errorInfo(const char *func) const;
+
+    /// Export parameter - setter
+    void setOofemExportEnabled(bool exportParameter) { m_isOofemExportEnabled = exportParameter; }
+    /// Export parameter - getter
+    bool isOofemExportEnabled() const { return m_isOofemExportEnabled; }
 };
 } // end namespace oofem
 #endif // engngm_h

@@ -610,8 +610,12 @@ Domain :: instanciateYourself(DataReader *dr)
 #  endif
 
     resolveDomainDofsDefaults( name.c_str() );
-    fprintf( outputStream, "Domain type: %s, default ndofs per node is %d\n\n\n",
-            name.c_str(), giveDefaultNodeDofIDArry().giveSize() );
+
+    if (engineeringModel->isOofemExportEnabled())
+    {
+        fprintf( outputStream, "Domain type: %s, default ndofs per node is %d\n\n\n",
+                 name.c_str(), giveDefaultNodeDofIDArry().giveSize() );
+    }
 
     // read output manager record
     std :: string tmp;

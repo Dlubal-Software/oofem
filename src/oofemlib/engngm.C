@@ -92,7 +92,7 @@
 
 
 namespace oofem {
-EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs()
+EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs(), m_isOofemExportEnabled(false)
 {
     number = i;
     defaultErrEstimator = NULL;
@@ -220,17 +220,28 @@ int EngngModel :: instanciateYourself(DataReader *dr, InputRecord *ir, const cha
         this->dataOutputFileName.append(".oofeg");
     }
 
-    if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
-        OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
-    }
+    // instanciate receiver
+    this->initializeFrom(ir); // initialize export parameter
+    exportModuleManager->initializeFrom(ir);
+    initModuleManager->initializeFrom(ir);
 
     this->Instanciate_init(); // Must be done after initializeFrom
 
-    fprintf(outputStream, "%s", PRG_HEADER);
-    this->startTime = time(NULL);
-    fprintf( outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+    if (m_isOofemExportEnabled)
+    {
+        if ( ( outputStream = fopen(this->dataOutputFileName.c_str(), "w") ) == NULL ) {
+            OOFEM_ERROR("Can't open output file %s", this->dataOutputFileName.c_str());
+        }
+        fprintf(outputStream, "%s", PRG_HEADER);
+    }
 
-    fprintf(outputStream, "%s\n", desc);
+    this->startTime = time(NULL);
+
+    if (m_isOofemExportEnabled)
+    {
+        fprintf( outputStream, "\nStarting analysis on: %s\n", ctime(& this->startTime) );
+        fprintf(outputStream, "%s\n", desc);
+    }
 
 #  ifdef VERBOSE
     OOFEM_LOG_DEBUG( "Reading all data from input file %s\n", dr->giveDataSourceName() );
@@ -241,11 +252,6 @@ int EngngModel :: instanciateYourself(DataReader *dr, InputRecord *ir, const cha
     }
 
 #endif
-
-    // instanciate receiver
-    this->initializeFrom(ir);
-    exportModuleManager->initializeFrom(ir);
-    initModuleManager->initializeFrom(ir);
 
     if ( this->nMetaSteps == 0 ) {
         inputReaderFinish = false;
@@ -301,6 +307,8 @@ EngngModel :: initializeFrom(InputRecord *ir)
     int _val = 1;
     IR_GIVE_OPTIONAL_FIELD(ir, _val, _IFT_EngngModel_nonLinFormulation);
     nonLinFormulation = ( fMode ) _val;
+    m_isOofemExportEnabled = false;
+    IR_GIVE_OPTIONAL_FIELD(ir, m_isOofemExportEnabled, _IFT_EngngModel_exportParameter);
 
     int eeTypeId = -1;
     IR_GIVE_OPTIONAL_FIELD(ir, eeTypeId, _IFT_EngngModel_eetype);
@@ -541,8 +549,11 @@ EngngModel :: solveYourself()
             OOFEM_LOG_INFO("EngngModel info: user time consumed by solution step %d: %.2fs\n",
                            this->giveCurrentStep()->giveNumber(), _steptime);
 
-            fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
-                    this->giveCurrentStep()->giveNumber(), _steptime);
+            if (m_isOofemExportEnabled)
+            {
+                fprintf(out, "\nUser time consumed by solution step %d: %.3f [s]\n\n",
+                        this->giveCurrentStep()->giveNumber(), _steptime);
+            }
 
 #ifdef __PARALLEL_MODE
             if ( loadBalancingFlag ) {
@@ -633,8 +644,11 @@ EngngModel :: updateYourself(TimeStep *tStep)
 void
 EngngModel :: terminate(TimeStep *tStep)
 {
-    this->doStepOutput(tStep);
-    fflush( this->giveOutputStream() );
+    if (m_isOofemExportEnabled)
+    {
+        this->doStepOutput(tStep);
+        fflush( this->giveOutputStream() );
+    }
     this->saveStepContext(tStep);
 }
 

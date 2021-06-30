@@ -1,0 +1,29 @@
+==================================================
+2017-07-21
+Úpravy nutné pro vypnutí exportu OOFEM souboru s výsledky (*.out)
+==================================================
+
+--------------------------------------------------
+Popis problému:
+--------------------------------------------------
+Při každém výpočtu dochází k nežádoucímu vytvoření textového souboru a exportu výsledků do něj.
+
+--------------------------------------------------
+Seznam upravených souborů:
+--------------------------------------------------
+src\oofemlib\domain.c
+src\oofemlib\engngm.h
+src\oofemlib\engngm.c
+
+--------------------------------------------------
+Popis úpravy:
+--------------------------------------------------
+Do bázové třídy EngngModel (engngm.h) byl přidán bool parametr m_isOofemExportEnabled, který export výsledků řídí. Dále byly vytvořeny dvě metody pro získání parametru (isOofemExportEnabled) a pro případné nastavení parametru (setOofemExportEnabled).
+
+Parametr m_isOofemExportEnabled je při iniciaci v konstruktoru inženýrského modelu (engngm) nastavený na false. Pouze na vyžádání je možné v metodě "initializeFrom" změnit hodnotu na true pomocí parametru "_IFT_EngngModel_exportParameter". Toho je možné docílit jak při načítání vstupních dat ze souboru (pomocí záznamu "export 1" v definici inženýrského modelu - třetí řádek vstupního souboru), tak při dynamickém zadávání (pomocí parametru _IFT_EngngModel_exportParameter nastaveného na true - opět v definici inženýrského modelu).
+
+V metodě EngngModel::instanciateYourself bylo změněno pořadí řádků, aby k volání this->initializeFrom (a případné změně m_isOofemExportEnabled) došlo ještě před vytvářením souboru pro export výsledků, který je rovněž závislý na parametru m_isOofemExportEnabled.
+
+Všechny exporty do souboru (EngngModel::instanciateYourself, EngngModel::solveYourself, EngngModel::terminate, Domain::instanciateYourself) jsou podmíněny hodnotou parametru m_isOofemExportEnabled.
+
+Všechny exporty v našich souborech (např. src\SectionSolver\SectionSolverStrain\EngineeringModels\StrainLinear) je třeba podmínit tímto parametrem.
